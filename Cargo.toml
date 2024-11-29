@@ -1,0 +1,11 @@
+[package]
+name = "read-device"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]  
+bytemuck = "1.20.0"
+evdev = "0.12.2" 
+gilrs = "0.11.0"
+hidapi = "2.6.3"
+uinput = "0.1.3" 
