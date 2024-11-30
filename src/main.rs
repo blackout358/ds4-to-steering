@@ -1,21 +1,24 @@
 use std::{
-    process,
-    thread::sleep,
+    thread,
     time::{Duration, Instant},
 };
 
-// sudo modprobe uinput
+const LEFT_TRIGGER_DEADZONE_ADJUST: f32 = 1.0;
+const RIGHT_TRIGGER_DEADZONE_ADJUST: f32 = 1.1;
 
-use bytemuck::cast_slice;
-use evdev::{Device as evDevice, InputEventKind};
-use gilrs::{Axis, Event, GamepadId, Gilrs};
+// sudo modprobe uinput
+// sudo nano /etc/udev/rules.d/99-virtual-gamepad.rules
+// KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Virtual Gamepad", TAG+="uaccess", ENV{ID_INPUT_JOYSTICK}="1"
+
+use gilrs::Gilrs;
 use hidapi::{HidApi, HidDevice};
-use uinput::event::{self, keyboard};
 struct ControllerData {
-    real_device: HidDevice,
-    tile_angle: f32,
+    device: HidDevice,
+    tilt_angle: f32,
     max_tilt: f32,
     virtual_input_device: uinput::Device,
+    mem_buf: Box<[u8]>,
+    previous_time: Instant,
 }
 impl ControllerData {
     pub fn new() -> Self {
@@ -30,18 +33,195 @@ impl ControllerData {
             .unwrap()
             .max(255)
             .min(0)
-            .event(uinput::event::controller::GamePad::North)
+            .event(uinput::event::absolute::Position::Z)
             .unwrap()
-            // .flat(1)
+            .max(255)
+            .min(0)
+            .event(uinput::event::absolute::Position::RZ)
+            .unwrap()
+            .max(255)
+            .min(0)
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::North,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::East,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::South,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::West,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::DPad(
+                uinput::event::controller::DPad::Up,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::DPad(
+                uinput::event::controller::DPad::Right,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::DPad(
+                uinput::event::controller::DPad::Down,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::DPad(
+                uinput::event::controller::DPad::Left,
+            ))
+            .unwrap()
             .create()
             .unwrap();
 
         ControllerData {
-            real_device: controller,
-            tile_angle: 0.0,
+            device: controller,
+            tilt_angle: 0.0,
             max_tilt: 70.0,
             virtual_input_device: input_device,
+            mem_buf: Box::new([0; 256]),
+            previous_time: Instant::now(),
         }
+    }
+
+    fn read_data(&mut self) -> Result<usize, hidapi::HidError> {
+        self.device.read(&mut self.mem_buf)
+    }
+
+    fn calculate_steering_angle(&mut self) -> f32 {
+        let gyro_z = i16::from_le_bytes([self.mem_buf[17], self.mem_buf[18]]) as f32;
+        let accel_x = i16::from_le_bytes([self.mem_buf[19], self.mem_buf[20]]) as f32;
+        let accel_y = i16::from_le_bytes([self.mem_buf[21], self.mem_buf[22]]) as f32;
+
+        let delta_time = self.previous_time.elapsed().as_secs_f32();
+        self.previous_time = Instant::now();
+
+        self.tilt_angle += (gyro_z * delta_time);
+
+        let tilt_angle = (accel_y.atan2(accel_x).to_degrees()).abs() - 90.0;
+
+        let steering_input = (tilt_angle / self.max_tilt).clamp(-1.0, 1.0);
+
+        // let _ = self.virtual_input_device.position(
+        //     &uinput::event::absolute::Position::X,
+        //     ((steering_input * 126.0) + 126.0) as i32,
+        // );
+
+        steering_input
+    }
+
+    fn calculate_triggers(&mut self) -> (f32, f32) {
+        let l_tr = (self.mem_buf[8] as f32 * LEFT_TRIGGER_DEADZONE_ADJUST)
+            .floor()
+            .clamp(0.0, 255.0);
+        let r_tr = (self.mem_buf[9] as f32 * RIGHT_TRIGGER_DEADZONE_ADJUST)
+            .floor()
+            .clamp(0.0, 255.0);
+
+        let _ = self
+            .virtual_input_device
+            .position(&uinput::event::absolute::Position::Z, l_tr as i32);
+        let _ = self
+            .virtual_input_device
+            .position(&uinput::event::absolute::Position::RZ, r_tr as i32);
+        // self
+
+        (l_tr, r_tr)
+    }
+
+    fn check_face_buttons(&mut self) {
+        let triangle: bool = (self.mem_buf[5] & 128) == 128;
+        let circle: bool = (self.mem_buf[5] & 64) == 64;
+        let x: bool = (self.mem_buf[5] & 32) == 32;
+        let square: bool = (self.mem_buf[5] & 16) == 16;
+
+        let w: bool = matches!(self.mem_buf[5], 5 | 6 | 7);
+        let s: bool = matches!(self.mem_buf[5], 4 | 3 | 5);
+        let e: bool = matches!(self.mem_buf[5], 2 | 1 | 3);
+        let n: bool = matches!(self.mem_buf[5], 0 | 1 | 7);
+
+        if triangle {
+            self.virtual_input_device
+                .press(&uinput::event::controller::GamePad::North)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::GamePad::North)
+                .unwrap();
+        }
+        if circle {
+            self.virtual_input_device
+                .press(&uinput::event::controller::GamePad::East)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::GamePad::East)
+                .unwrap();
+        }
+        if x {
+            self.virtual_input_device
+                .press(&uinput::event::controller::GamePad::South)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::GamePad::South)
+                .unwrap();
+        }
+        if square {
+            self.virtual_input_device
+                .press(&uinput::event::controller::GamePad::West)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::GamePad::West)
+                .unwrap();
+        }
+
+        if n {
+            self.virtual_input_device
+                .press(&uinput::event::controller::DPad::Up)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::DPad::Up)
+                .unwrap();
+        }
+        if e {
+            self.virtual_input_device
+                .press(&uinput::event::controller::DPad::Right)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::DPad::Right)
+                .unwrap();
+        }
+
+        if s {
+            self.virtual_input_device
+                .press(&uinput::event::controller::DPad::Down)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::DPad::Down)
+                .unwrap();
+        }
+
+        if w {
+            self.virtual_input_device
+                .press(&uinput::event::controller::DPad::Left)
+                .unwrap();
+        } else {
+            self.virtual_input_device
+                .release(&uinput::event::controller::DPad::Left)
+                .unwrap();
+        }
+
+        println!(
+            "\n{:>5} {:>5} {:>5} {:>5} w:{:>5} s:{:>5} e:{:>5} n:{:>5}",
+            triangle, circle, x, square, w, s, e, n
+        );
     }
 }
 
@@ -54,65 +234,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // println!("{}", my_gamepad.unwrap().id());
 
     let mut controller_data: ControllerData = ControllerData::new();
-    let mut mem_buf = [0; 256];
 
     for (_id, gamepad) in gilrs.gamepads() {
         println!("{} is {:?}", gamepad.name(), gamepad.power_info());
     }
     loop {
-        let mut time = Instant::now();
-        match controller.read(&mut mem_buf) {
-            Ok(count) => parse_inputs(&mem_buf[..count], &mut controller_data, time),
+        // sleep(Duration::from_millis(10));
+        match controller_data.read_data() {
+            Ok(_) => parse_inputs(&mut controller_data),
             Err(e) => {
                 println!("Error: {}", e);
                 break;
             }
         }
-        // sleep(Duration::from_millis(150));
     }
     Ok(())
 }
 
-fn parse_inputs(mem_buf: &[u8], gamepad_data: &mut ControllerData, mut previous_time: Instant) {
-    let sticks = format!(
-        "Leftstick ({},{}) Rightstick ({},{})",
-        mem_buf[1], mem_buf[2], mem_buf[3], mem_buf[4]
-    );
-
-    let gyro_z = i16::from_le_bytes([mem_buf[17], mem_buf[18]]) as f32;
-    let accel_x = i16::from_le_bytes([mem_buf[19], mem_buf[20]]) as f32;
-    let accel_y = i16::from_le_bytes([mem_buf[21], mem_buf[22]]) as f32;
-
-    let delta_time = previous_time.elapsed().as_secs_f32();
-    previous_time = Instant::now();
-
-    gamepad_data.tile_angle += (gyro_z * delta_time);
-
-    let tilt_angle = (accel_y.atan2(accel_x).to_degrees()).abs() - 90.0;
-
-    let steering_input = (tilt_angle / gamepad_data.max_tilt).clamp(-1.0, 1.0);
-
-    gamepad_data
-        .virtual_input_device
-        .position(
-            &uinput::event::absolute::Position::X,
-            ((steering_input * 126.0) + 126.0) as i32,
-        )
-        .unwrap();
-
-    gamepad_data
-        .virtual_input_device
-        .click(&uinput::event::controller::GamePad::North)
-        .unwrap();
+fn parse_inputs(gamepad_data: &mut ControllerData) {
+    let steering_input = gamepad_data.calculate_steering_angle();
+    gamepad_data.check_face_buttons();
+    let triggers = gamepad_data.calculate_triggers();
+    // gamepad_data
+    //     .virtual_input_device
+    //     .click(&uinput::event::controller::GamePad::North)
+    //     .unwrap();
     let _sync = gamepad_data.virtual_input_device.synchronize().unwrap();
-    // test.s
 
     println!(
-        " ({:0>3}) Steering Angle: {:>7.2}, Tilt Angle: {:>7.2}, Steering input: {:3>0.3}",
-        mem_buf[1],
-        gamepad_data.tile_angle,
-        tilt_angle,
-        (steering_input * 126.0) + 126.0
+        " ({:0>3}) Steering Angle: {:>7.2}, Tilt Angle: {:>7.2}, Steering input: {:3>0.3}, Button Bit: {} Ltr {} Rtr {}",
+        gamepad_data.mem_buf[1],
+        gamepad_data.tilt_angle,
+        gamepad_data.tilt_angle,
+        (steering_input * 126.0) + 126.0, gamepad_data.mem_buf[5], triggers.0, triggers.1
     );
 
     // println!("{} {}\n", sticks, gyro);
