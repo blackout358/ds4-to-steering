@@ -14,11 +14,9 @@ use gilrs::Gilrs;
 use hidapi::{HidApi, HidDevice};
 struct ControllerData {
     device: HidDevice,
-    tilt_angle: f32,
     max_tilt: f32,
     virtual_input_device: uinput::Device,
     mem_buf: Box<[u8]>,
-    previous_time: Instant,
 }
 impl ControllerData {
     pub fn new() -> Self {
@@ -80,11 +78,9 @@ impl ControllerData {
 
         ControllerData {
             device: controller,
-            tilt_angle: 0.0,
             max_tilt: 70.0,
             virtual_input_device: input_device,
             mem_buf: Box::new([0; 256]),
-            previous_time: Instant::now(),
         }
     }
 
@@ -96,11 +92,6 @@ impl ControllerData {
         let gyro_z = i16::from_le_bytes([self.mem_buf[17], self.mem_buf[18]]) as f32;
         let accel_x = i16::from_le_bytes([self.mem_buf[19], self.mem_buf[20]]) as f32;
         let accel_y = i16::from_le_bytes([self.mem_buf[21], self.mem_buf[22]]) as f32;
-
-        let delta_time = self.previous_time.elapsed().as_secs_f32();
-        self.previous_time = Instant::now();
-
-        self.tilt_angle += (gyro_z * delta_time);
 
         let tilt_angle = (accel_y.atan2(accel_x).to_degrees()).abs() - 90.0;
 
@@ -264,11 +255,12 @@ fn parse_inputs(gamepad_data: &mut ControllerData) {
     let _sync = gamepad_data.virtual_input_device.synchronize().unwrap();
 
     println!(
-        " ({:0>3}) Steering Angle: {:>7.2}, Tilt Angle: {:>7.2}, Steering input: {:3>0.3}, Button Bit: {} Ltr {} Rtr {}",
+        " ({:0>3}) Steering input: {:3>0.3}, Button Bit: {} Ltr {} Rtr {}",
         gamepad_data.mem_buf[1],
-        gamepad_data.tilt_angle,
-        gamepad_data.tilt_angle,
-        (steering_input * 126.0) + 126.0, gamepad_data.mem_buf[5], triggers.0, triggers.1
+        (steering_input * 126.0) + 126.0,
+        gamepad_data.mem_buf[5],
+        triggers.0,
+        triggers.1
     );
 
     // println!("{} {}\n", sticks, gyro);
