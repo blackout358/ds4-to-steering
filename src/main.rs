@@ -104,10 +104,10 @@ impl ControllerData {
 
         let steering_input = (tilt_angle / self.max_tilt).clamp(-1.0, 1.0);
 
-        // let _ = self.virtual_input_device.position(
-        //     &uinput::event::absolute::Position::X,
-        //     ((steering_input * 126.0) + 126.0) as i32,
-        // );
+        let _ = self.virtual_input_device.position(
+            &uinput::event::absolute::Position::X,
+            ((steering_input * 126.0) + 126.0) as i32,
+        );
 
         steering_input
     }
