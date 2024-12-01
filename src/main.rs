@@ -12,6 +12,7 @@ const RIGHT_TRIGGER_DEADZONE_ADJUST: f32 = 1.1;
 
 use gilrs::Gilrs;
 use hidapi::{HidApi, HidDevice};
+
 struct ControllerData {
     device: HidDevice,
     max_tilt: f32,
@@ -27,6 +28,7 @@ impl ControllerData {
             .unwrap()
             .name("Virtual Gamepad")
             .unwrap()
+            .version(2 as u16)
             .event(uinput::event::absolute::Position::X)
             .unwrap()
             .max(255)
@@ -41,6 +43,22 @@ impl ControllerData {
             .unwrap()
             .max(255)
             .min(0)
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::TL,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::TR,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::Start,
+            ))
+            .unwrap()
+            .event(uinput::event::Controller::GamePad(
+                uinput::event::controller::GamePad::Select,
+            ))
+            .unwrap()
             .event(uinput::event::Controller::GamePad(
                 uinput::event::controller::GamePad::North,
             ))
@@ -119,7 +137,6 @@ impl ControllerData {
         let _ = self
             .virtual_input_device
             .position(&uinput::event::absolute::Position::RZ, r_tr as i32);
-        // self
 
         (l_tr, r_tr)
     }
@@ -135,104 +152,54 @@ impl ControllerData {
         let e: bool = matches!(self.mem_buf[5], 2 | 1 | 3);
         let n: bool = matches!(self.mem_buf[5], 0 | 1 | 7);
 
-        if triangle {
-            self.virtual_input_device
-                .press(&uinput::event::controller::GamePad::North)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::GamePad::North)
-                .unwrap();
-        }
-        if circle {
-            self.virtual_input_device
-                .press(&uinput::event::controller::GamePad::East)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::GamePad::East)
-                .unwrap();
-        }
-        if x {
-            self.virtual_input_device
-                .press(&uinput::event::controller::GamePad::South)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::GamePad::South)
-                .unwrap();
-        }
-        if square {
-            self.virtual_input_device
-                .press(&uinput::event::controller::GamePad::West)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::GamePad::West)
-                .unwrap();
-        }
+        let start = self.mem_buf[6] == 32;
+        let select = self.mem_buf[6] == 16;
 
-        if n {
-            self.virtual_input_device
-                .press(&uinput::event::controller::DPad::Up)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::DPad::Up)
-                .unwrap();
-        }
-        if e {
-            self.virtual_input_device
-                .press(&uinput::event::controller::DPad::Right)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::DPad::Right)
-                .unwrap();
-        }
+        let l1 = self.mem_buf[6] == 2;
+        let r1 = self.mem_buf[6] == 1;
 
-        if s {
-            self.virtual_input_device
-                .press(&uinput::event::controller::DPad::Down)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::DPad::Down)
-                .unwrap();
-        }
+        self.check_gamepad(triangle, uinput::event::controller::GamePad::North);
+        self.check_gamepad(circle, uinput::event::controller::GamePad::East);
+        self.check_gamepad(x, uinput::event::controller::GamePad::South);
+        self.check_gamepad(square, uinput::event::controller::GamePad::West);
 
-        if w {
-            self.virtual_input_device
-                .press(&uinput::event::controller::DPad::Left)
-                .unwrap();
-        } else {
-            self.virtual_input_device
-                .release(&uinput::event::controller::DPad::Left)
-                .unwrap();
-        }
+        self.check_dpad(n, uinput::event::controller::DPad::Up);
+        self.check_dpad(e, uinput::event::controller::DPad::Right);
+        self.check_dpad(s, uinput::event::controller::DPad::Down);
+        self.check_dpad(w, uinput::event::controller::DPad::Left);
+
+        self.check_gamepad(start, uinput::event::controller::GamePad::Start);
+        self.check_gamepad(select, uinput::event::controller::GamePad::Select);
+        self.check_gamepad(l1, uinput::event::controller::GamePad::TL);
+        self.check_gamepad(r1, uinput::event::controller::GamePad::TR);
 
         println!(
             "\n{:>5} {:>5} {:>5} {:>5} w:{:>5} s:{:>5} e:{:>5} n:{:>5}",
             triangle, circle, x, square, w, s, e, n
         );
     }
+
+    fn check_gamepad(&mut self, pressed: bool, event: uinput::event::controller::GamePad) {
+        if pressed {
+            self.virtual_input_device.press(&event).unwrap();
+        } else {
+            self.virtual_input_device.release(&event).unwrap();
+        }
+    }
+
+    fn check_dpad(&mut self, pressed: bool, event: uinput::event::controller::DPad) {
+        if pressed {
+            self.virtual_input_device.press(&event).unwrap();
+        } else {
+            self.virtual_input_device.release(&event).unwrap();
+        }
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let api = HidApi::new().expect("Failed to create HID API instance.");
-    // println!("{:#?}", api.device_list().collect::<Vec<_>>());
-    let controller = api.open(1356, 2508).expect("Error opening controller");
-    let mut gilrs = Gilrs::new().unwrap();
-
-    // println!("{}", my_gamepad.unwrap().id());
-
     let mut controller_data: ControllerData = ControllerData::new();
 
-    for (_id, gamepad) in gilrs.gamepads() {
-        println!("{} is {:?}", gamepad.name(), gamepad.power_info());
-    }
     loop {
-        // sleep(Duration::from_millis(10));
         match controller_data.read_data() {
             Ok(_) => parse_inputs(&mut controller_data),
             Err(e) => {
@@ -248,10 +215,6 @@ fn parse_inputs(gamepad_data: &mut ControllerData) {
     let steering_input = gamepad_data.calculate_steering_angle();
     gamepad_data.check_face_buttons();
     let triggers = gamepad_data.calculate_triggers();
-    // gamepad_data
-    //     .virtual_input_device
-    //     .click(&uinput::event::controller::GamePad::North)
-    //     .unwrap();
     let _sync = gamepad_data.virtual_input_device.synchronize().unwrap();
 
     println!(
@@ -262,6 +225,4 @@ fn parse_inputs(gamepad_data: &mut ControllerData) {
         triggers.0,
         triggers.1
     );
-
-    // println!("{} {}\n", sticks, gyro);
 }
