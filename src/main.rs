@@ -112,10 +112,10 @@ impl ControllerData {
         let tilt_angle = (accel_y.atan2(accel_x).to_degrees()).abs() - 90.0;
 
         let steering_input = (tilt_angle / self.max_tilt).clamp(-1.0, 1.0);
-
+        println!("Raw input: {:>.2}", steering_input);
         let _ = self.virtual_input_device.position(
             &uinput::event::absolute::Position::X,
-            ((steering_input * 126.0) + 126.0) as i32,
+            (((steering_input + 0.06) * 126.0) + 126.0) as i32,
         );
 
         steering_input
@@ -218,7 +218,7 @@ fn parse_inputs(gamepad_data: &mut ControllerData) {
     println!(
         " ({:0>3}) Steering input: {:3>0.3}, Button Bit: {} Ltr {} Rtr {}",
         gamepad_data.mem_buf[1],
-        (steering_input * 126.0) + 126.0,
+        (((steering_input) * 126.0) + 126.0).clamp(0.0, 256.0),
         gamepad_data.mem_buf[5],
         triggers.0,
         triggers.1
