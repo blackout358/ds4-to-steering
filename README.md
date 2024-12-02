@@ -13,18 +13,22 @@ Make sure the uinput is enabled
 ```sudo modprobe uinput```
 
 Then I had to add some custom rules so the virtual gamepad is recognised as a joystick.
+
 `sudo nano /etc/udev/rules.d/99-virtual-gamepad.rules`
 
 `KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Virtual Gamepad", TAG+="uaccess", ENV{ID_INPUT_JOYSTICK}="1"`
 
 Then I reloaded the rules
-`sudo udevadm control --reload-rules`
-`sudo udevadm trigger`
+```
+sudo udevadm control --reload-rules`
+sudo udevadm trigger`
+```
 
-One potential trouble shoot could be adding your user to the events read/write permissions. Replace X with the event number
-`sudo setfacl -m u:{USER}:rw /dev/input/eventX`
-
-I checked what event it was using `evtest`. The name of the gamepad is `Virtual Gamepad`
+One potential trouble shoot could be adding your user to the events read/write permissions. Replace X with the event number.
+```
+sudo setfacl -m u:{USER}:rw /dev/input/eventX
+```
+I checked what event it was using `evtest`. The name of the gamepad is `Virtual Gamepad`.
 
 ```
 /dev/input/event21: Sony Interactive Entertainment Wireless Controller
