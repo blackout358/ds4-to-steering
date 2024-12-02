@@ -4,7 +4,8 @@ Basically you can tilt the controller like you would be steering in mario kart e
 This is **Linux** only as it uses the uinput kernal module
 
 ## Tweaks
-    - Modify trigger deadzones if they are old and on full compression they dont send out the full signal. 231 * 1.1 = 255
+- Modify trigger deadzones if they are old and on full compression they dont send out the full signal. 231 * 1.1 = 255
+- Mine is set to 1.1 as my controllers are old, to change it back to normal, change `RIGHT_TRIGGER_DEADZONE_ADJUST` to 1.0
 ## Setup
 
 Make sure the uinput is enabled
