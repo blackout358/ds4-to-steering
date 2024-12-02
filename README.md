@@ -43,7 +43,7 @@ I checked what event it was using `evtest`. The name of the gamepad is `Virtual 
 /dev/input/event21: Sony Interactive Entertainment Wireless Controller
 /dev/input/event22: Sony Interactive Entertainment Wireless Controller Motion Sensors  
 /dev/input/event23: Sony Interactive Entertainment Wireless Controller Touchpad  
-/dev/input/event24: Virtual Gamepad  
+/dev/input/event24: **Virtual Gamepad**  
 /dev/input/event3: Logitech Gaming Mouse G502  
 /dev/input/event4: Logitech Gaming Mouse G502 Keyboard  
 /dev/input/event5: USB Keyboard  
