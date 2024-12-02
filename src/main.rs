@@ -1,16 +1,8 @@
-use std::{
-    thread,
-    time::{Duration, Instant},
-};
-
 const LEFT_TRIGGER_DEADZONE_ADJUST: f32 = 1.0;
 const RIGHT_TRIGGER_DEADZONE_ADJUST: f32 = 1.1;
 
-// sudo modprobe uinput
-// sudo nano /etc/udev/rules.d/99-virtual-gamepad.rules
-// KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Virtual Gamepad", TAG+="uaccess", ENV{ID_INPUT_JOYSTICK}="1"
+const MAX_TILT: f32 = 70.0;
 
-use gilrs::Gilrs;
 use hidapi::{HidApi, HidDevice};
 
 struct ControllerData {
@@ -96,7 +88,7 @@ impl ControllerData {
 
         ControllerData {
             device: controller,
-            max_tilt: 70.0,
+            max_tilt: MAX_TILT,
             virtual_input_device: input_device,
             mem_buf: Box::new([0; 256]),
         }
@@ -107,7 +99,6 @@ impl ControllerData {
     }
 
     fn calculate_steering_angle(&mut self) -> f32 {
-        let gyro_z = i16::from_le_bytes([self.mem_buf[17], self.mem_buf[18]]) as f32;
         let accel_x = i16::from_le_bytes([self.mem_buf[19], self.mem_buf[20]]) as f32;
         let accel_y = i16::from_le_bytes([self.mem_buf[21], self.mem_buf[22]]) as f32;
 
