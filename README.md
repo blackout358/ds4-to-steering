@@ -26,7 +26,8 @@ One potential trouble shoot could be adding your user to the events read/write p
 
 I checked what event it was using `evtest`. The name of the gamepad is `Virtual Gamepad`
 
-`/dev/input/event21: Sony Interactive Entertainment Wireless Controller
+```
+/dev/input/event21: Sony Interactive Entertainment Wireless Controller
 /dev/input/event22: Sony Interactive Entertainment Wireless Controller Motion Sensors  
 /dev/input/event23: Sony Interactive Entertainment Wireless Controller Touchpad  
 /dev/input/event24: Virtual Gamepad  
@@ -35,6 +36,7 @@ I checked what event it was using `evtest`. The name of the gamepad is `Virtual 
 /dev/input/event5: USB Keyboard  
 /dev/input/event6: USB Keyboard Consumer Control  
 /dev/input/event7: USB Keyboard System Control  
-/dev/input/event8: USB Keyboard`
+/dev/input/event8: USB Keyboard
+```
 
 For me, it is event 24 'Virtual Gamepad'
