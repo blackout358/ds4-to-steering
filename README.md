@@ -35,7 +35,7 @@ sudo udevadm trigger
 
 One potential trouble shoot could be adding your user to the events read/write permissions. Replace X with the event number.
 ```
-sudo setfacl -m u:{USER}:rw /dev/input/eventX
+sudo setfacl -m u:$USER:rw /dev/input/eventX
 ```
 I checked what event it was using `evtest`. The name of the gamepad is `Virtual Gamepad`.
 
