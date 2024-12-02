@@ -1,3 +1,6 @@
+const VENDOR_ID: u16 = 1356;
+const PRODUCT_ID: u16 = 2508;
+
 const LEFT_TRIGGER_DEADZONE_ADJUST: f32 = 1.0;
 const RIGHT_TRIGGER_DEADZONE_ADJUST: f32 = 1.1;
 
@@ -14,7 +17,9 @@ struct ControllerData {
 impl ControllerData {
     pub fn new() -> Self {
         let api = HidApi::new().expect("Failed to create HID API instance.");
-        let controller = api.open(1356, 2508).expect("Error opening controller");
+        let controller = api
+            .open(VENDOR_ID, PRODUCT_ID)
+            .expect("Error opening controller");
 
         let input_device = uinput::default()
             .unwrap()
