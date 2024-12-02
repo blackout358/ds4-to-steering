@@ -1,7 +1,12 @@
 # DS4 to steering
 Translates DS4 controllers accelerator moition sensors into left thumb stick X movement.
 Basically you can tilt the controller like you would be steering in mario kart etc
+
 This is **Linux** only as it uses the uinput kernal module
+
+This only works when the controller is connected via **USB**.
+
+https://www.psdevwiki.com/ps4/DS4-USB
 
 ## Tweaks
 - Modify trigger deadzones if they are old and on full compression they dont send out the full signal. 231 * 1.1 = 255
@@ -19,7 +24,7 @@ Then I had to add some custom rules so the virtual gamepad is recognised as a jo
 ```
 sudo nano /etc/udev/rules.d/99-virtual-gamepad.rules`
 
-`KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Virtual Gamepad", TAG+="uaccess", ENV{ID_INPUT_JOYSTICK}="1"
+KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Virtual Gamepad", TAG+="uaccess", ENV{ID_INPUT_JOYSTICK}="1"
 ```
 
 Then I reloaded the rules
