@@ -4,8 +4,7 @@ Basically you can tilt the controller like you would be steering in mario kart e
 This is **Linux** only as it uses the uinput kernal module
 
 ## Tweaks
-At the top the file there is a variable that allows you to modify the triggers input value scales. My controller is old so my right trigger is fully pressed, it only gets to around 231/255. To fix this I multiply it by 1.1. If you don't have these issues, change it from 1.1 -> 1.0
-You can also adjust the max tilt for the controller, so how far you have to steer it before being all the way on one side
+    - Modify trigger deadzones if they are old and on full compression they dont send out the full signal. 231 * 1.1 = 255
 ## Setup
 
 Make sure the uinput is enabled
