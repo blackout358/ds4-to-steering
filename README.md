@@ -1,13 +1,13 @@
+# DS4 to steering
 Translates DS4 controllers accelerator moition sensors into left thumb stick X movement.
-
 Basically you can tilt the controller like you would be steering in mario kart etc
+This is **Linux** only as it uses the uinput kernal module
 
-This is Linux only as it uses the uinput kernal module
- **Tweaks**
- At the top the file there is a variable that allows you to modify the triggers input value scales. My controller is old so my right trigger is fully pressed, it only gets to around 231/255. To fix this I multiply it by 1.1. If you don't have these issues, change it from 1.1 -> 1.0
+## Tweaks
+At the top the file there is a variable that allows you to modify the triggers input value scales. My controller is old so my right trigger is fully pressed, it only gets to around 231/255. To fix this I multiply it by 1.1. If you don't have these issues, change it from 1.1 -> 1.0
 You can also adjust the max tilt for the controller, so how far you have to steer it before being all the way on one side
+## Setup
 
-**Setup**
 Make sure the uinput is enabled
 
 ```sudo modprobe uinput```
@@ -26,15 +26,15 @@ One potential trouble shoot could be adding your user to the events read/write p
 
 I checked what event it was using `evtest`. The name of the gamepad is `Virtual Gamepad`
 
-`/dev/input/event21: Sony Interactive Entertainment Wireless Controller`
-`/dev/input/event22: Sony Interactive Entertainment Wireless Controller Motion Sensors  `
-`/dev/input/event23: Sony Interactive Entertainment Wireless Controller Touchpad  `
-`/dev/input/event24: Virtual Gamepad  `
-`/dev/input/event3: Logitech Gaming Mouse G502  `
-`/dev/input/event4: Logitech Gaming Mouse G502 Keyboard  `
-`/dev/input/event5: USB Keyboard  `
-`/dev/input/event6: USB Keyboard Consumer Control  `
-`/dev/input/event7: USB Keyboard System Control  `
-`/dev/input/event8: USB Keyboard`
+`/dev/input/event21: Sony Interactive Entertainment Wireless Controller
+/dev/input/event22: Sony Interactive Entertainment Wireless Controller Motion Sensors  
+/dev/input/event23: Sony Interactive Entertainment Wireless Controller Touchpad  
+/dev/input/event24: Virtual Gamepad  
+/dev/input/event3: Logitech Gaming Mouse G502  
+/dev/input/event4: Logitech Gaming Mouse G502 Keyboard  
+/dev/input/event5: USB Keyboard  
+/dev/input/event6: USB Keyboard Consumer Control  
+/dev/input/event7: USB Keyboard System Control  
+/dev/input/event8: USB Keyboard`
 
 For me, it is event 24 'Virtual Gamepad'
