@@ -5,6 +5,7 @@ const LEFT_TRIGGER_DEADZONE_ADJUST: f32 = 1.0;
 const RIGHT_TRIGGER_DEADZONE_ADJUST: f32 = 1.1;
 
 const MAX_TILT: f32 = 70.0;
+const STEERING_FIZZ: i32 = 3;
 
 use hidapi::{HidApi, HidDevice};
 
@@ -30,7 +31,7 @@ impl ControllerData {
             .unwrap()
             .max(255)
             .min(0)
-            .fuzz(3)
+            .fuzz(STEERING_FIZZ)
             .event(uinput::event::absolute::Position::Y)
             .unwrap()
             .event(uinput::event::absolute::Position::Z)
