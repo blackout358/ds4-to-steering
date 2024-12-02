@@ -30,6 +30,7 @@ impl ControllerData {
             .unwrap()
             .max(255)
             .min(0)
+            .fuzz(3)
             .event(uinput::event::absolute::Position::Y)
             .unwrap()
             .event(uinput::event::absolute::Position::Z)
