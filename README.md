@@ -8,12 +8,14 @@ This only works when the controller is connected via **USB**.
 
 https://www.psdevwiki.com/ps4/DS4-USB
 
+Hold the **PS BUTTON** to stop sending joystick inputs. Useful if you want to bind other stuff but the axis is recognised first.
+
 ## Tweaks
 - Modify trigger deadzones if they are old and on full compression they dont send out the full signal. 231 * 1.1 = 255
 - Mine is set to 1.1 as my controllers are old, to change it back to normal, change `RIGHT_TRIGGER_DEADZONE_ADJUST` to 1.0
 ## Setup
 
-Make sure the uinput is enabled
+Make sure the uinput is running.
 
 ```
 sudo modprobe uinput
@@ -22,7 +24,7 @@ sudo modprobe uinput
 Then I had to add some custom rules so the virtual gamepad is recognised as a joystick.
 
 ```
-sudo nano /etc/udev/rules.d/99-virtual-gamepad.rules`
+sudo nano /etc/udev/rules.d/99-virtual-gamepad.rules
 
 KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Virtual Gamepad", TAG+="uaccess", ENV{ID_INPUT_JOYSTICK}="1"
 ```
