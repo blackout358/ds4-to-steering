@@ -14,6 +14,7 @@ struct ControllerData {
     max_tilt: f32,
     virtual_input_device: uinput::Device,
     mem_buf: Box<[u8]>,
+    disable_stick: bool,
 }
 impl ControllerData {
     pub fn new() -> Self {
@@ -23,7 +24,7 @@ impl ControllerData {
             .expect("Error opening controller");
 
         let input_device = uinput::default()
-            .unwrap()
+            .expect("Is uinput running? \nsudo modprobe uinput\n")
             .name("Virtual Gamepad")
             .unwrap()
             .version(2 as u16)
@@ -98,6 +99,7 @@ impl ControllerData {
             max_tilt: MAX_TILT,
             virtual_input_device: input_device,
             mem_buf: Box::new([0; 256]),
+            disable_stick: false,
         }
     }
 
@@ -171,9 +173,23 @@ impl ControllerData {
         self.check_gamepad(l1, uinput::event::controller::GamePad::TL);
         self.check_gamepad(r1, uinput::event::controller::GamePad::TR);
 
+        if self.mem_buf[7] & 1 == 1 {
+            self.disable_stick = true;
+        } else {
+            self.disable_stick = false;
+        }
+
         println!(
-            "\n{:>5} {:>5} {:>5} {:>5} w:{:>5} s:{:>5} e:{:>5} n:{:>5}",
-            triangle, circle, x, square, w, s, e, n
+            "\n{:>5} {:>5} {:>5} {:>5} w:{:>5} s:{:>5} e:{:>5} n:{:>5} psbttn: {}",
+            triangle,
+            circle,
+            x,
+            square,
+            w,
+            s,
+            e,
+            n,
+            self.mem_buf[7] & 1
         );
     }
 
@@ -210,17 +226,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn parse_inputs(gamepad_data: &mut ControllerData) {
-    let steering_input = gamepad_data.calculate_steering_angle();
+    let mut steering_input = 0.0;
+    if !gamepad_data.disable_stick {
+        steering_input = gamepad_data.calculate_steering_angle();
+    }
     gamepad_data.check_face_buttons();
     let triggers = gamepad_data.calculate_triggers();
     let _sync = gamepad_data.virtual_input_device.synchronize().unwrap();
 
     println!(
-        " ({:0>3}) Steering input: {:3>0.3}, Button Bit: {} Ltr {} Rtr {}",
+        " ({:0>3}) Steering input: {:3>0.3}, Button Bit: {} Ltr {} Rtr {} Disabled Stick: {}",
         gamepad_data.mem_buf[1],
         (((steering_input) * 126.0) + 126.0).clamp(0.0, 256.0),
         gamepad_data.mem_buf[5],
         triggers.0,
-        triggers.1
+        triggers.1,
+        gamepad_data.disable_stick
     );
 }
